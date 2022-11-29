@@ -183,13 +183,13 @@ function render_rect(ctx::CairoContext,
         set_source_rgba(ctx, color_fill)
         fstroke ? fill_preserve(ctx) : fill(ctx)
     end
-    
+
     if fstroke
         set_source_rgba(ctx, color_stroke)
         set_line_width(ctx, line_width)
         stroke(ctx)
     end
-    
+
     restore(ctx)
 end
 function render_round_rect(
@@ -635,10 +635,10 @@ function render_arrow(
 
     # render the arrowhead
     O = pts[:,end] # origin, center of the arrowhead
-    A = O + R * [ arrowhead_len/2 0]'
-    B = O + R * [-arrowhead_len/2 0]'
-    C = O + R * [-arrowhead_len/2-len_prime  arrowhead_width/2]'
-    D = O + R * [-arrowhead_len/2-len_prime -arrowhead_width/2]'
+    A = O + reshape(R * [ arrowhead_len/2 0]', 2)
+    B = O + reshape(R * [-arrowhead_len/2 0]', 2)
+    C = O + reshape(R * [-arrowhead_len/2-len_prime  arrowhead_width/2]', 2)
+    D = O + reshape(R * [-arrowhead_len/2-len_prime -arrowhead_width/2]', 2)
 
     new_sub_path(ctx)
     move_to(ctx, A[1], A[2])
