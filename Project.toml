@@ -15,7 +15,6 @@ Rsvg = "c4c386cf-5103-5370-be45-f3a111cca3b8"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-AutomotiveSimulator = "0.1"
 Cairo = "1.0"
 Colors = "0.9, 0.10, 0.11, 0.12"
 Parameters = "0.12"

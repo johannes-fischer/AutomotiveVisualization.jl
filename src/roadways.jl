@@ -20,20 +20,54 @@ end
 function add_renderable!(rendermodel::RenderModel, lane::Lane, roadway::Roadway;
     color_asphalt       :: Colorant=colortheme["COLOR_ASPHALT"],
     )
-
+    # change the render mode to fill instead of line
     n = length(lane.curve)
-    pts = Array{Float64}(undef, 2, n + has_next(lane))
+    pts = Array{Float64}(undef, 2, 2*n + 2 + 2*has_next(lane))
+    pts_index = 0
     for (i,pt) in enumerate(lane.curve)
-        pts[1,i] = pt.pos.x
-        pts[2,i] = pt.pos.y
+        edgept = pt.pos + polar(lane.width[i]/2, pt.pos.θ + π/2)
+        pts_index += 1
+        pts[1,pts_index] = edgept.x
+        pts[2,pts_index] = edgept.y
     end
+
     if has_next(lane)
         pt = next_lane_point(lane, roadway)
-        pts[1,end] = pt.pos.x
-        pts[2,end] = pt.pos.y
+        edgept = pt.pos + polar(lane.width[end]/2, pt.pos.θ + π/2)
+        pts_index += 1
+        pts[1, pts_index] = edgept.x
+        pts[2, pts_index] = edgept.y
+
+        pt = next_lane_point(lane, roadway).pos
+        pts_index += 1
+        pts[1, pts_index] = pt.x
+        pts[2, pts_index] = pt.y
+
+        pt = next_lane_point(lane, roadway)
+        edgept = pt.pos + polar(lane.width[end]/2, pt.pos.θ - π/2)
+        pts_index += 1
+        pts[1, pts_index] = edgept.x
+        pts[2, pts_index] = edgept.y
+    else
+        pt = lane.curve[end].pos
+        pts_index += 1
+        pts[1, pts_index] = pt.x
+        pts[2, pts_index] = pt.y
     end
 
-    add_instruction!(rendermodel, render_line, (pts, color_asphalt, lane.width))
+    for (j,pt) in Iterators.reverse(enumerate(lane.curve))
+        edgept = pt.pos + polar(lane.width[j]/2, pt.pos.θ - π/2)
+        pts_index += 1
+        pts[1, pts_index] = edgept.x
+        pts[2, pts_index] = edgept.y
+    end
+
+    pt = lane.curve[1].pos
+    pts_index += 1
+    pts[1, pts_index] = pt.x
+    pts[2, pts_index] = pt.y
+
+    add_instruction!(rendermodel, render_fill_region, (pts, color_asphalt))
     return rendermodel
 end
 
@@ -55,15 +89,15 @@ function add_renderable!(rendermodel::RenderModel, roadway::Roadway;
                                         length(laneR.curve) + has_next(laneR) +
                                         2*length(seg.lanes))
             pts_index = 0
-            for pt in laneL.curve
-                edgept = pt.pos + polar(laneL.width/2, pt.pos.θ + π/2)
+            for (i,pt) in enumerate(laneL.curve)
+                edgept = pt.pos + polar(laneL.width[i]/2, pt.pos.θ + π/2)
                 pts_index += 1
                 pts[1, pts_index] = edgept.x
                 pts[2, pts_index] = edgept.y
             end
             if has_next(laneL)
                 pt = next_lane_point(laneL, roadway)
-                edgept = pt.pos + polar(laneL.width/2, pt.pos.θ + π/2)
+                edgept = pt.pos + polar(laneL.width[end]/2, pt.pos.θ + π/2)
                 pts_index += 1
                 pts[1, pts_index] = edgept.x
                 pts[2, pts_index] = edgept.y
@@ -82,14 +116,14 @@ function add_renderable!(rendermodel::RenderModel, roadway::Roadway;
 
             if has_next(laneR)
                 pt = next_lane_point(laneR, roadway)
-                edgept = pt.pos + polar(laneR.width/2, pt.pos.θ - π/2)
+                edgept = pt.pos + polar(laneR.width[end]/2, pt.pos.θ - π/2)
                 pts_index += 1
                 pts[1, pts_index] = edgept.x
                 pts[2, pts_index] = edgept.y
             end
-            for j in length(laneR.curve) : -1 : 1
+            for (j,pt) in Iterators.reverse(enumerate(laneR.curve))
                 pt = laneR.curve[j]
-                edgept = pt.pos + polar(laneR.width/2, pt.pos.θ - π/2)
+                edgept = pt.pos + polar(laneR.width[j]/2, pt.pos.θ - π/2)
                 pts_index += 1
                 pts[1, pts_index] = edgept.x
                 pts[2, pts_index] = edgept.y
@@ -114,12 +148,12 @@ function add_renderable!(rendermodel::RenderModel, roadway::Roadway;
         for lane in seg.lanes
 
             N = length(lane.curve)
-            halfwidth = lane.width/2
+            
 
             # always render the left lane marking
             pts_left = Array{Float64}(undef, 2, N)
             for (i,pt) in enumerate(lane.curve)
-                p_left = pt.pos + polar(halfwidth, pt.pos.θ + π/2)
+                p_left = pt.pos + polar(lane.width[i]/2, pt.pos.θ + π/2)
 
                 pts_left[1,i] = p_left.x
                 pts_left[2,i] = p_left.y
@@ -127,7 +161,7 @@ function add_renderable!(rendermodel::RenderModel, roadway::Roadway;
             if has_next(lane)
                 lane2 = next_lane(lane, roadway)
                 pt = lane2.curve[1]
-                p_left = pt.pos + polar(lane2.width/2, pt.pos.θ + π/2)
+                p_left = pt.pos + polar(lane.width[end]/2, pt.pos.θ + π/2)
                 pts_left = hcat(pts_left, [p_left.x, p_left.y])
             end
 
@@ -138,7 +172,7 @@ function add_renderable!(rendermodel::RenderModel, roadway::Roadway;
                 pts_right = Array{Float64}(undef, 2, N)
 
                 for (i,pt) in enumerate(lane.curve)
-                    p_right = pt.pos - polar(halfwidth, pt.pos.θ + π/2)
+                    p_right = pt.pos - polar(lane.width[i]/2, pt.pos.θ + π/2)
 
                     pts_right[1,i] = p_right.x
                     pts_right[2,i] = p_right.y
@@ -147,7 +181,7 @@ function add_renderable!(rendermodel::RenderModel, roadway::Roadway;
                 if has_next(lane)
                     lane2 = next_lane(lane, roadway)
                     pt = lane2.curve[1]
-                    p_right = pt.pos - polar(lane2.width/2, pt.pos.θ + π/2)
+                    p_right = pt.pos - polar(lane.width[end]/2, pt.pos.θ + π/2)
                     pts_right = hcat(pts_right, [p_right.x, p_right.y])
                 end
 
