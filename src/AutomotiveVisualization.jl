@@ -121,4 +121,12 @@ export  TextOverlay,
 # Convenient implementation for roadway and vehicle rendering
 include("roadways.jl")
 
+export
+    MultiLaneIDMTargetsOverlay,
+    MultiLaneIDMVirtualTargetsOverlay,
+    AccelerationOverlay,
+    SimulationOverlay,
+    RoadIndexOverlay
+include("multilane_idm.jl")
+
 end # module
